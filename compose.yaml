@@ -36,7 +36,13 @@ services:
     depends_on:
       kafka:
         condition: service_healthy
-    entrypoint: /opt/kafka/bin/kafka-topics.sh
-    command: ["--bootstrap-server", "kafka:29092", "--create", "--if-not-exists", "--topic", "retail.orders.raw", "--partitions", "3", "--replication-factor", "1"]
+    entrypoint: /bin/sh
+    command:
+      - -ec
+      - |
+        for topic in retail.orders.raw retail.orders.valid retail.orders.invalid; do
+          /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:29092 --create --if-not-exists --topic "$$topic" --partitions 3 --replication-factor 1
+        done
+
 volumes:
   kafka-data:

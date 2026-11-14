@@ -1,5 +1,4 @@
 import argparse
-import json
 import math
 import random
 import time
@@ -7,16 +6,17 @@ import time
 from confluent_kafka import Producer
 
 from retail_stream.config import BOOTSTRAP_SERVERS, ORDERS_TOPIC
-from retail_stream.events import create_order
+from retail_stream.scenarios import SCENARIOS, make_message
 
 
-def publish_orders(bootstrap_servers: str, topic: str, count: int, rate: float, seed: int) -> int:
+def publish_orders(
+    bootstrap_servers: str, topic: str, count: int, rate: float, seed: int, scenario: str = "normal"
+) -> int:
     producer = Producer(
         {
             "bootstrap.servers": bootstrap_servers,
             "enable.idempotence": True,
             "delivery.timeout.ms": 15000,
-            "allow.auto.create.topics": False,
         }
     )
     rng = random.Random(seed)
@@ -40,13 +40,16 @@ def publish_orders(bootstrap_servers: str, topic: str, count: int, rate: float, 
         while count == 0 or sent < count:
             if errors:
                 break
-            event = create_order(rng)
-            producer.produce(
-                topic,
-                key=event["payload"]["order_id"].encode(),
-                value=json.dumps(event).encode(),
-                on_delivery=on_delivery,
-            )
+            key, value = make_message(rng, scenario, sent)
+            deadline = time.monotonic() + 15
+            while True:
+                try:
+                    producer.produce(topic, key=key, value=value, on_delivery=on_delivery)
+                    break
+                except BufferError:
+                    producer.poll(0.1)
+                    if errors or time.monotonic() >= deadline:
+                        raise RuntimeError("File du producteur saturée ou livraison en échec")
             sent += 1
             producer.poll(0)
             time.sleep(1 / rate)
@@ -66,6 +69,7 @@ def main():
     )
     parser.add_argument("--rate", type=float, default=2, help="Commandes par seconde.")
     parser.add_argument("--seed", type=int, default=42)
+    parser.add_argument("--scenario", choices=(*SCENARIOS, "mixed"), default="normal")
     args = parser.parse_args()
     if args.count < 0 or not math.isfinite(args.rate) or args.rate <= 0:
         parser.error("count doit être positif ou nul, rate doit être fini et strictement positif.")

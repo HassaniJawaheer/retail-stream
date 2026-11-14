@@ -1,6 +1,6 @@
 # RetailStream
 
-RetailStream est un projet de Data Engineering consacré aux événements e-commerce et supply chain. Cette première version fait circuler des commandes fictives de Python vers Kafka, puis les lit avec Spark Structured Streaming.
+RetailStream est un projet de Data Engineering consacré aux événements e-commerce et supply chain. Le producteur envoie des commandes fictives à Kafka. Spark les valide et les répartit dans deux topics : `retail.orders.valid` et `retail.orders.invalid`.
 
 ## Prérequis
 
@@ -34,21 +34,17 @@ Dans un deuxième terminal, depuis le même dossier, produire 20 commandes à ra
 uv run --locked retail-produce --count 20 --rate 2
 ```
 
-Le producteur affiche les livraisons confirmées par Kafka, avec partition et offset. Spark affiche les commandes dans le premier terminal, par micro-batch toutes les cinq secondes environ.
-
-Pour produire en continu, jusqu'à `Ctrl+C` :
-
 ```bash
-uv run --locked retail-produce --count 0 --rate 2
+uv run --locked retail-produce --count 6 --scenario mixed
 ```
 
-En alternative au mode continu, après avoir arrêté le premier Spark, lire les messages disponibles puis quitter :
+Pour voir les rejets dans un troisième terminal :
 
 ```bash
-uv run --locked retail-stream --available-now
+docker compose exec kafka /opt/kafka/bin/kafka-console-consumer.sh --bootstrap-server kafka:29092 --topic retail.orders.invalid --from-beginning
 ```
 
-Spark reprend sa progression grâce au checkpoint : les messages déjà traités ne sont pas réaffichés. Ne pas lancer deux instances Spark avec le même checkpoint.
+Remplacer `retail.orders.invalid` par `retail.orders.valid` pour voir les événements acceptés. Chaque rejet contient le JSON original, les motifs et ses coordonnées Kafka.
 
 Pour arrêter les programmes, utiliser `Ctrl+C` dans leurs terminaux, puis arrêter Kafka sans supprimer ses données :
 
@@ -63,13 +59,10 @@ uv run --locked pytest
 uv run --locked pytest -m integration
 ```
 
-La première commande teste le générateur ; la seconde vérifie le parcours Python → Kafka → Spark et nécessite Kafka démarré.
-
 ## Événements
 
 Chaque message JSON représente une création de commande, avec un `event_id`, un `event_type`, une date UTC, un producteur, une version de schéma et un `payload`.
 
-Le contenu métier comporte une commande, un client fictif, un entrepôt, une devise et des articles. Les prix et le montant total sont des entiers en centimes. Le montant est la somme des quantités multipliées par les prix unitaires.
 
 ## Configuration et stockage
 
@@ -77,10 +70,6 @@ Le contenu métier comporte une commande, un client fictif, un entrepôt, une de
 |---|---|
 | `KAFKA_BOOTSTRAP_SERVERS` | `127.0.0.1:9092` |
 | `KAFKA_ORDERS_TOPIC` | `retail.orders.raw` |
-| `SPARK_CHECKPOINT` | `.state/checkpoints/orders-console` |
-
-Un topic personnalisé doit être créé avant utilisation. Le service `kafka-init` crée uniquement `retail.orders.raw`.
-
-Kafka conserve ses données dans le volume Docker `kafka-data`. La rétention est de 24 heures, avec suppression par segments.
-
-Le broker est accessible uniquement depuis la machine locale. L'installation utilise un seul broker, sans réplication entre machines.
+| `KAFKA_VALID_TOPIC` | `retail.orders.valid` |
+| `KAFKA_INVALID_TOPIC` | `retail.orders.invalid` |
+| `SPARK_CHECKPOINT` | `.state/checkpoints/orders-validation-v1` |

@@ -1,6 +1,8 @@
 import argparse
 import os
+import signal
 import sys
+from threading import Event
 
 from pyspark import __version__
 from pyspark.sql import DataFrame, SparkSession
@@ -15,7 +17,14 @@ from pyspark.sql.types import (
     TimestampType,
 )
 
-from retail_stream.config import BOOTSTRAP_SERVERS, CHECKPOINT, ORDERS_TOPIC
+from retail_stream.config import (
+    BOOTSTRAP_SERVERS,
+    CHECKPOINT,
+    INVALID_TOPIC,
+    ORDERS_TOPIC,
+    VALID_TOPIC,
+)
+from retail_stream.validation import route_orders, validate_orders
 
 ITEM_SCHEMA = StructType(
     [
@@ -26,6 +35,7 @@ ITEM_SCHEMA = StructType(
 )
 EVENT_SCHEMA = StructType(
     [
+        StructField("_corrupt_record", StringType()),
         StructField("event_id", StringType()),
         StructField("event_type", StringType()),
         StructField("event_time", TimestampType()),
@@ -87,38 +97,69 @@ def read_orders(spark: SparkSession, bootstrap_servers: str, topic: str) -> Data
     return parse_orders(raw)
 
 
+def start_validation(
+    spark, bootstrap_servers, topic, valid_topic, invalid_topic, checkpoint, available_now=False
+):
+    if len({topic, valid_topic, invalid_topic}) != 3:
+        raise ValueError("Les topics source, valide et invalide doivent être distincts")
+    orders = validate_orders(read_orders(spark, bootstrap_servers, topic))
+    writer = (
+        route_orders(orders, valid_topic, invalid_topic)
+        .writeStream.format("kafka")
+        .option("kafka.bootstrap.servers", bootstrap_servers)
+        .option("checkpointLocation", checkpoint)
+        .queryName("orders-validation")
+        .outputMode("append")
+    )
+    if available_now:
+        writer = writer.trigger(availableNow=True)
+    else:
+        writer = writer.trigger(processingTime="5 seconds")
+    return writer.start()
+
+
 def main():
-    parser = argparse.ArgumentParser(description="Lire les commandes Kafka avec Spark.")
+    parser = argparse.ArgumentParser(description="Valider les commandes et les router dans Kafka.")
     parser.add_argument(
-        "--available-now", action="store_true", help="Lire le stock actuel puis finir."
+        "--available-now",
+        action="store_true",
+        help="Traiter les messages disponibles puis quitter.",
     )
     args = parser.parse_args()
     spark = create_spark()
+    stopping = Event()
+    previous = {}
+    query = None
+    last_batch = None
+    for sig in (signal.SIGINT, signal.SIGTERM):
+        previous[sig] = signal.signal(sig, lambda signum, frame: stopping.set())
     try:
-        orders = read_orders(spark, BOOTSTRAP_SERVERS, ORDERS_TOPIC)
-        writer = (
-            orders.select(
-                "event_id",
-                "event_type",
-                "event_time",
-                "payload.order_id",
-                "payload.warehouse_id",
-                "payload.total_amount_cents",
-                "partition",
-                "offset",
-            )
-            .writeStream.format("console")
-            .option("truncate", "false")
-            .option("numRows", 20)
-            .option("checkpointLocation", CHECKPOINT)
-            .outputMode("append")
+        query = start_validation(
+            spark,
+            BOOTSTRAP_SERVERS,
+            ORDERS_TOPIC,
+            VALID_TOPIC,
+            INVALID_TOPIC,
+            CHECKPOINT,
+            args.available_now,
         )
-        if args.available_now:
-            writer = writer.trigger(availableNow=True)
-        else:
-            writer = writer.trigger(processingTime="5 seconds")
-        writer.start().awaitTermination()
-    except KeyboardInterrupt:
-        pass
+        print(f"Validation active : {ORDERS_TOPIC} → {VALID_TOPIC} / {INVALID_TOPIC}", flush=True)
+        while not stopping.is_set():
+            finished = query.awaitTermination(1)
+            progress = query.lastProgress
+            if progress and progress["batchId"] != last_batch:
+                last_batch = progress["batchId"]
+                print(
+                    f"Lot {last_batch} terminé : {progress['numInputRows']} messages lus",
+                    flush=True,
+                )
+            if finished:
+                break
     finally:
-        spark.stop()
+        try:
+            if query is not None and query.isActive:
+                query.stop()
+        finally:
+            spark.stop()
+            for sig, handler in previous.items():
+                signal.signal(sig, handler)
