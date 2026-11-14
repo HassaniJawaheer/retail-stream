@@ -1,0 +1,17 @@
+# Python
+__pycache__/
+*.py[cod]
+
+# Virtual environments
+.venv/
+
+# Temporary files
+/instruction.md
+
+# OS
+.DS_Store
+.pytest_cache/
+.ruff_cache/
+.state/
+*.egg-info/
+dist/

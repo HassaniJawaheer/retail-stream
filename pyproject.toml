@@ -1,0 +1,33 @@
+[project]
+name = "retail-stream"
+version = "0.1.0"
+description = "Pipeline de streaming retail avec Kafka et Spark"
+readme = "README.md"
+requires-python = ">=3.11,<3.12"
+dependencies = [
+    "confluent-kafka==2.12.0",
+    "pyspark==4.0.1",
+]
+
+[project.scripts]
+retail-produce = "retail_stream.producer:main"
+retail-stream = "retail_stream.streaming:main"
+
+[build-system]
+requires = ["hatchling==1.27.0"]
+build-backend = "hatchling.build"
+
+[dependency-groups]
+dev = ["pytest==8.4.2", "ruff==0.14.3"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-m 'not integration'"
+markers = ["integration: nécessite Kafka et Java, démarre Spark"]
+
+[tool.ruff]
+target-version = "py311"
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "I"]
