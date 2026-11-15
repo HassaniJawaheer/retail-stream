@@ -44,3 +44,17 @@ def test_full_queue_retries_the_same_message(monkeypatch):
     first, second = producer.produce.call_args_list
     assert first == second
     producer.poll.assert_any_call(0.1)
+
+
+def test_duplicate_scenario_resends_identical_messages(monkeypatch):
+    producer = Mock()
+    producer.flush.return_value = 0
+    monkeypatch.setattr("retail_stream.producer.Producer", lambda config: producer)
+    monkeypatch.setattr("retail_stream.producer.time.sleep", lambda seconds: None)
+    publish_orders("unused", "test", 5, 100, 42, "duplicates")
+    calls = producer.produce.call_args_list
+    assert len(calls) == 5
+    for first, second in [(0, 1), (2, 3)]:
+        assert calls[first].kwargs["key"] == calls[second].kwargs["key"]
+        assert calls[first].kwargs["value"] == calls[second].kwargs["value"]
+    assert len({call.kwargs["value"] for call in calls}) == 3

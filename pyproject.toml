@@ -12,6 +12,7 @@ dependencies = [
 [project.scripts]
 retail-produce = "retail_stream.producer:main"
 retail-stream = "retail_stream.streaming:main"
+retail-deduplicate = "retail_stream.deduplication:main"
 
 [build-system]
 requires = ["hatchling==1.27.0"]

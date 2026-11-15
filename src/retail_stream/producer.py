@@ -36,11 +36,18 @@ def publish_orders(
             )
 
     sent = 0
+    previous_message = None
     try:
         while count == 0 or sent < count:
             if errors:
                 break
-            key, value = make_message(rng, scenario, sent)
+            if scenario == "duplicates" and sent % 2 == 1:
+                key, value = previous_message
+            else:
+                key, value = make_message(
+                    rng, "normal" if scenario == "duplicates" else scenario, sent
+                )
+                previous_message = key, value
             deadline = time.monotonic() + 15
             while True:
                 try:
@@ -69,7 +76,7 @@ def main():
     )
     parser.add_argument("--rate", type=float, default=2, help="Commandes par seconde.")
     parser.add_argument("--seed", type=int, default=42)
-    parser.add_argument("--scenario", choices=(*SCENARIOS, "mixed"), default="normal")
+    parser.add_argument("--scenario", choices=(*SCENARIOS, "mixed", "duplicates"), default="normal")
     args = parser.parse_args()
     if args.count < 0 or not math.isfinite(args.rate) or args.rate <= 0:
         parser.error("count doit être positif ou nul, rate doit être fini et strictement positif.")

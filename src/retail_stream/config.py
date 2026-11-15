@@ -6,3 +6,7 @@ CHECKPOINT = os.getenv("SPARK_CHECKPOINT", ".state/checkpoints/orders-validation
 
 VALID_TOPIC = os.getenv("KAFKA_VALID_TOPIC", "retail.orders.valid")
 INVALID_TOPIC = os.getenv("KAFKA_INVALID_TOPIC", "retail.orders.invalid")
+
+UNIQUE_TOPIC = os.getenv("KAFKA_UNIQUE_TOPIC", "retail.orders.unique")
+DEDUP_CHECKPOINT = os.getenv("SPARK_DEDUP_CHECKPOINT", ".state/checkpoints/orders-dedup-v1")
+DEDUP_WATERMARK = os.getenv("SPARK_DEDUP_WATERMARK", "2 minutes")

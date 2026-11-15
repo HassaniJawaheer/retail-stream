@@ -46,6 +46,22 @@ docker compose exec kafka /opt/kafka/bin/kafka-console-consumer.sh --bootstrap-s
 
 Remplacer `retail.orders.invalid` par `retail.orders.valid` pour voir les événements acceptés. Chaque rejet contient le JSON original, les motifs et ses coordonnées Kafka.
 
+Pour dédupliquer les événements valides, laisser la validation tourner et lancer dans un autre terminal :
+
+```bash
+uv run --locked retail-deduplicate
+```
+
+Puis produire six messages correspondant à trois événements envoyés deux fois :
+
+```bash
+uv run --locked retail-produce --count 6 --scenario duplicates
+```
+
+Les événements retenus sont écrits dans `retail.orders.unique`, consultable avec la même commande Kafka que ci-dessus en remplaçant le topic. Relancer `kafka-init` après mise à jour pour créer ce topic.
+
+La déduplication utilise `event_id` et un watermark de deux minutes sur `event_time`. Les événements trop anciens peuvent être écartés, même s’ils sont uniques. Son checkpoint est distinct de celui de validation et doit être conservé pour reprendre l’état. La sortie Kafka reste « au moins une fois » : une panne pendant l’écriture peut répéter une sortie.
+
 Pour arrêter les programmes, utiliser `Ctrl+C` dans leurs terminaux, puis arrêter Kafka sans supprimer ses données :
 
 ```bash
@@ -73,3 +89,6 @@ Chaque message JSON représente une création de commande, avec un `event_id`, u
 | `KAFKA_VALID_TOPIC` | `retail.orders.valid` |
 | `KAFKA_INVALID_TOPIC` | `retail.orders.invalid` |
 | `SPARK_CHECKPOINT` | `.state/checkpoints/orders-validation-v1` |
+| `KAFKA_UNIQUE_TOPIC` | `retail.orders.unique` |
+| `SPARK_DEDUP_CHECKPOINT` | `.state/checkpoints/orders-dedup-v1` |
+| `SPARK_DEDUP_WATERMARK` | `2 minutes` |
