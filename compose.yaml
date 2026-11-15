@@ -44,5 +44,22 @@ services:
           /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:29092 --create --if-not-exists --topic "$$topic" --partitions 3 --replication-factor 1
         done
 
+  postgres:
+    image: postgres:17.6
+    ports:
+      - "127.0.0.1:5433:5432"
+    environment:
+      POSTGRES_DB: retail
+      POSTGRES_USER: retail
+      POSTGRES_PASSWORD: retail_local
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U retail -d retail"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+
 volumes:
   kafka-data:
+  postgres-data:

@@ -7,66 +7,42 @@ RetailStream est un projet de Data Engineering consacré aux événements e-comm
 - Python 3.11 et uv ;
 - Java 17 ;
 - Docker et Docker Compose ;
-- port local 9092 disponible.
+- ports locaux 9092 et 5433 disponibles.
 
-Versions utilisées : Kafka 4.1.0, PySpark 4.0.1 et confluent-kafka 2.12.0.
+Versions utilisées : Kafka 4.1.0, PySpark 4.0.1 et confluent-kafka 2.12.0, PostgreSQL 17.6 et psycopg 3.2.12.
 Kafka est lancé avec Docker ; les dépendances Python sont installées avec uv.
 
 ## Installation et lancement
 
-Depuis la racine du dépôt (Internet nécessaire au premier lancement) :
+Depuis la racine du dépôt :
 
 ```bash
 uv sync --locked
-docker compose up -d kafka
+docker compose up -d --wait kafka postgres
 docker compose run --rm kafka-init
 ```
 
-Dans un premier terminal, depuis la racine du dépôt, démarrer Spark et le laisser tourner :
+Lancer chaque traitement dans un terminal distinct et le laisser tourner :
 
-```bash
-uv run --locked retail-stream
-```
+| Terminal | Commande |
+|---|---|
+| 1 — Validation | `uv run --locked retail-stream` |
+| 2 — Déduplication | `uv run --locked retail-deduplicate` |
+| 3 — Agrégations | `uv run --locked retail-aggregate` |
 
-Dans un deuxième terminal, depuis le même dossier, produire 20 commandes à raison de deux par seconde :
+Dans un quatrième terminal, produire les commandes :
 
 ```bash
 uv run --locked retail-produce --count 20 --rate 2
 ```
 
-```bash
-uv run --locked retail-produce --count 6 --scenario mixed
-```
-
-Pour voir les rejets dans un troisième terminal :
+Consulter les résultats dans PostgreSQL :
 
 ```bash
-docker compose exec kafka /opt/kafka/bin/kafka-console-consumer.sh --bootstrap-server kafka:29092 --topic retail.orders.invalid --from-beginning
+docker compose exec postgres psql -U retail -d retail -c "SELECT * FROM order_metrics ORDER BY window_start DESC, warehouse_id LIMIT 20;"
 ```
 
-Remplacer `retail.orders.invalid` par `retail.orders.valid` pour voir les événements acceptés. Chaque rejet contient le JSON original, les motifs et ses coordonnées Kafka.
-
-Pour dédupliquer les événements valides, laisser la validation tourner et lancer dans un autre terminal :
-
-```bash
-uv run --locked retail-deduplicate
-```
-
-Puis produire six messages correspondant à trois événements envoyés deux fois :
-
-```bash
-uv run --locked retail-produce --count 6 --scenario duplicates
-```
-
-Les événements retenus sont écrits dans `retail.orders.unique`, consultable avec la même commande Kafka que ci-dessus en remplaçant le topic. Relancer `kafka-init` après mise à jour pour créer ce topic.
-
-La déduplication utilise `event_id` et un watermark de deux minutes sur `event_time`. Les événements trop anciens peuvent être écartés, même s’ils sont uniques. Son checkpoint est distinct de celui de validation et doit être conservé pour reprendre l’état. La sortie Kafka reste « au moins une fois » : une panne pendant l’écriture peut répéter une sortie.
-
-Pour arrêter les programmes, utiliser `Ctrl+C` dans leurs terminaux, puis arrêter Kafka sans supprimer ses données :
-
-```bash
-docker compose stop
-```
+Pour arrêter : `Ctrl+C` dans les terminaux des traitements, puis `docker compose stop`.
 
 ## Tests
 
@@ -92,3 +68,6 @@ Chaque message JSON représente une création de commande, avec un `event_id`, u
 | `KAFKA_UNIQUE_TOPIC` | `retail.orders.unique` |
 | `SPARK_DEDUP_CHECKPOINT` | `.state/checkpoints/orders-dedup-v1` |
 | `SPARK_DEDUP_WATERMARK` | `2 minutes` |
+| `DATABASE_URL` | `postgresql://retail:retail_local@127.0.0.1:5433/retail` |
+| `SPARK_ANALYTICS_PATH` | `.state/analytics` |
+| `SPARK_AGG_WATERMARK` | `2 minutes` |

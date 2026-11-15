@@ -10,3 +10,7 @@ INVALID_TOPIC = os.getenv("KAFKA_INVALID_TOPIC", "retail.orders.invalid")
 UNIQUE_TOPIC = os.getenv("KAFKA_UNIQUE_TOPIC", "retail.orders.unique")
 DEDUP_CHECKPOINT = os.getenv("SPARK_DEDUP_CHECKPOINT", ".state/checkpoints/orders-dedup-v1")
 DEDUP_WATERMARK = os.getenv("SPARK_DEDUP_WATERMARK", "2 minutes")
+
+DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://retail:retail_local@127.0.0.1:5433/retail")
+ANALYTICS_PATH = os.getenv("SPARK_ANALYTICS_PATH", ".state/analytics")
+AGG_WATERMARK = os.getenv("SPARK_AGG_WATERMARK", "2 minutes")

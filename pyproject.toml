@@ -7,12 +7,14 @@ requires-python = ">=3.11,<3.12"
 dependencies = [
     "confluent-kafka==2.12.0",
     "pyspark==4.0.1",
+    "psycopg[binary]==3.2.12",
 ]
 
 [project.scripts]
 retail-produce = "retail_stream.producer:main"
 retail-stream = "retail_stream.streaming:main"
 retail-deduplicate = "retail_stream.deduplication:main"
+retail-aggregate = "retail_stream.aggregation:main"
 
 [build-system]
 requires = ["hatchling==1.27.0"]
