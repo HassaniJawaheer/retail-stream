@@ -9,7 +9,7 @@ RetailStream est un projet de Data Engineering consacré aux événements e-comm
 - Docker et Docker Compose ;
 - ports locaux 9092 et 5433 disponibles.
 
-Versions utilisées : Kafka 4.1.0, PySpark 4.0.1 et confluent-kafka 2.12.0, PostgreSQL 17.6 et psycopg 3.2.12.
+Versions utilisées : Kafka 4.1.0, PySpark 4.0.1 et confluent-kafka 2.12.0, PostgreSQL 17.6, psycopg 3.2.12 et Streamlit 1.50.0.
 Kafka est lancé avec Docker ; les dépendances Python sont installées avec uv.
 
 ## Installation et lancement
@@ -35,6 +35,14 @@ Dans un quatrième terminal, produire les commandes :
 ```bash
 uv run --locked retail-produce --count 20 --rate 2
 ```
+
+Pour ouvrir le dashboard dans un autre terminal :
+
+```bash
+uv run --locked streamlit run src/retail_stream/dashboard.py --server.address 127.0.0.1
+```
+
+Ouvrir http://127.0.0.1:8501 : indicateurs, graphiques et filtres par période et entrepôt, actualisés toutes les dix secondes.
 
 Consulter les résultats dans PostgreSQL :
 
