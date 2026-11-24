@@ -6,7 +6,7 @@ import pytest
 
 from retail_stream.scenarios import encode_scenario, fixed_event
 from retail_stream.streaming import create_spark, parse_orders
-from retail_stream.validation import validate_orders
+from retail_stream.validation import route_orders, validate_orders
 
 
 @pytest.mark.integration
@@ -37,6 +37,11 @@ def test_validation_rules():
             event["payload"][field] = value
             key, encoded = encode_scenario(event, "normal")
             cases.append((key, encoded, expected))
+        for sku in ["SKU-INCONNU", "", None]:
+            event = fixed_event(random.Random(42), f"unknown-product-{sku}")
+            event["payload"]["items"][-1]["sku"] = sku
+            key, encoded = encode_scenario(event, "normal")
+            cases.append((key, encoded, "UNKNOWN_PRODUCT"))
         event = fixed_event(random.Random(42), "bad-date")
         event["event_time"] = "not-a-date"
         cases.append(
@@ -56,7 +61,11 @@ def test_validation_rules():
             "key binary, value binary, topic string, "
             "partition int, offset long, timestamp timestamp",
         )
-        rows = validate_orders(parse_orders(raw)).orderBy("offset").collect()
+        validated = validate_orders(parse_orders(raw))
+        rows = validated.orderBy("offset").collect()
+        routed = route_orders(validated, "valid", "invalid").collect()
+        rejections = [json.loads(row.value) for row in routed if row.topic == "invalid"]
+        assert sum("UNKNOWN_PRODUCT" in row["errors"] for row in rejections) >= 3
         for row, (_, _, expected) in zip(rows, cases, strict=True):
             if expected is None:
                 assert row.errors == []

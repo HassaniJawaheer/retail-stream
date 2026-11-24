@@ -1,7 +1,7 @@
 from pyspark.sql import DataFrame
 from pyspark.sql import functions as F
 
-from retail_stream.events import WAREHOUSES
+from retail_stream.events import CATALOG, WAREHOUSES
 
 
 def validate_orders(orders: DataFrame) -> DataFrame:
@@ -35,6 +35,9 @@ def validate_orders(orders: DataFrame) -> DataFrame:
             & (F.length(F.trim(item.sku)) > 0)
             & (item.quantity > 0)
             & (item.unit_price_cents >= 0),
+        ),
+        "UNKNOWN_PRODUCT": F.forall(
+            items, lambda item: item.sku.isin(*[sku for sku, _ in CATALOG])
         ),
         "TOTAL_MISMATCH": (F.col("payload.total_amount_cents") >= 0)
         & (F.col("payload.total_amount_cents") == total),
