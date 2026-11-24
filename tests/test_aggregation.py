@@ -14,6 +14,7 @@ from psycopg.conninfo import make_conninfo
 from psycopg.sql import SQL, Identifier
 
 from retail_stream.aggregation import aggregate_orders, start_analytics
+from retail_stream.cleanup import clean_parquet
 from retail_stream.config import BOOTSTRAP_SERVERS, DATABASE_URL
 from retail_stream.storage import initialize_database, write_metrics
 from retail_stream.streaming import create_spark
@@ -136,6 +137,11 @@ def test_streaming_metrics_duplicates_lateness_and_replay(database, tmp_path, mo
             Decimal(6),
             Decimal("3333.33"),
         )
+        before_cleanup = metrics(database)
+        removed, _ = clean_parquet(root, retention_hours=0, apply=True)
+        assert removed > 0
+        run()
+        assert metrics(database) == before_cleanup
         original = write_metrics
 
         def fail_after_commit(batch, batch_id, database_url):

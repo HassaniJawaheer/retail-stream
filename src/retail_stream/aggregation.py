@@ -7,6 +7,7 @@ from pyspark.sql import DataFrame
 from pyspark.sql import functions as F
 from pyspark.sql.types import LongType, StringType, StructField, StructType, TimestampType
 
+from retail_stream.cleanup import analytics_lock
 from retail_stream.config import (
     AGG_WATERMARK,
     ANALYTICS_PATH,
@@ -105,7 +106,7 @@ def start_analytics(
         raise
 
 
-def main():
+def run():
     parser = argparse.ArgumentParser(description="Agréger les commandes et écrire dans PostgreSQL.")
     parser.add_argument("--available-now", action="store_true")
     args = parser.parse_args()
@@ -140,3 +141,8 @@ def main():
             spark.stop()
             for sig, handler in previous.items():
                 signal.signal(sig, handler)
+
+
+def main():
+    with analytics_lock(ANALYTICS_PATH):
+        run()

@@ -16,6 +16,7 @@ dependencies = [
 retail-produce = "retail_stream.producer:main"
 retail-stream = "retail_stream.streaming:main"
 retail-deduplicate = "retail_stream.deduplication:main"
+retail-clean-parquet = "retail_stream.cleanup:main"
 retail-aggregate = "retail_stream.aggregation:main"
 
 [build-system]
