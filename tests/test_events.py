@@ -2,6 +2,7 @@ import random
 from datetime import datetime
 from uuid import UUID
 
+from retail_stream.config import WAREHOUSE_ID
 from retail_stream.events import create_order
 
 
@@ -11,13 +12,14 @@ def test_order_has_valid_identifiers_and_utc_time():
     UUID(event["payload"]["order_id"])
     assert datetime.fromisoformat(event["event_time"]).utcoffset().total_seconds() == 0
     assert event["event_type"] == "order_created"
-    assert event["version"] == 1
+    assert event["version"] == 2
 
 
 def test_amount_matches_items():
     rng = random.Random(42)
     for _ in range(100):
         payload = create_order(rng)["payload"]
+        assert payload["warehouse_id"] == WAREHOUSE_ID
         assert payload["currency"] == "EUR"
         assert all(item["quantity"] > 0 for item in payload["items"])
         assert payload["total_amount_cents"] == sum(

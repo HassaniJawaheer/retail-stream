@@ -15,7 +15,7 @@ from psycopg.sql import SQL, Identifier
 
 from retail_stream.aggregation import aggregate_orders, start_analytics
 from retail_stream.cleanup import clean_parquet
-from retail_stream.config import BOOTSTRAP_SERVERS, DATABASE_URL
+from retail_stream.config import BOOTSTRAP_SERVERS, DATABASE_URL, WAREHOUSE_ID
 from retail_stream.storage import initialize_database, write_metrics
 from retail_stream.streaming import create_spark
 
@@ -52,7 +52,7 @@ def test_metrics_upsert_and_transaction_rollback(database):
                 (datetime(2026, 1, 1, 0, 0, 10), "WH-PARIS", 1000, 1),
                 (datetime(2026, 1, 1, 0, 0, 50), "WH-PARIS", 3000, 2),
                 (datetime(2026, 1, 1, 0, 1, 0), "WH-PARIS", 500, 1),
-                (datetime(2026, 1, 1, 0, 0, 30), "WH-LYON", 2000, 1),
+                (datetime(2026, 1, 1, 0, 0, 30), WAREHOUSE_ID, 2000, 1),
             ],
             "event_time timestamp, warehouse_id string, total_amount_cents long, item_count long",
         )
@@ -89,7 +89,7 @@ def test_streaming_metrics_duplicates_lateness_and_replay(database, tmp_path, mo
         return {
             "event_id": name,
             "event_type": "order_created",
-            "version": 1,
+            "version": 2 if warehouse == WAREHOUSE_ID else 1,
             "event_time": datetime(2026, 1, 1, 0, minute, second, tzinfo=timezone.utc).isoformat(),
             "producer": "test",
             "payload": {
@@ -124,7 +124,7 @@ def test_streaming_metrics_duplicates_lateness_and_replay(database, tmp_path, mo
         spark = create_spark()
         a = event("a")
         b = event("b", second=50, amount=3000, qty=2)
-        c = event("c", warehouse="WH-LYON", amount=2000)
+        c = event("c", warehouse=WAREHOUSE_ID, amount=2000)
         publish(a, a, b, c)
         run()
         assert metrics(database)[1][1:] == ("WH-PARIS", 2, Decimal(4000), Decimal(3), Decimal(2000))

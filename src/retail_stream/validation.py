@@ -1,7 +1,8 @@
 from pyspark.sql import DataFrame
 from pyspark.sql import functions as F
 
-from retail_stream.events import CATALOG, WAREHOUSES
+from retail_stream.config import WAREHOUSE_ID
+from retail_stream.events import CATALOG
 
 
 def validate_orders(orders: DataFrame) -> DataFrame:
@@ -20,12 +21,15 @@ def validate_orders(orders: DataFrame) -> DataFrame:
         "INVALID_JSON_OR_TYPE": F.col("_corrupt_record").isNull() & F.col("raw_value").isNotNull(),
         "MISSING_EVENT_ID": present("event_id"),
         "UNSUPPORTED_EVENT_TYPE": F.col("event_type") == "order_created",
-        "UNSUPPORTED_VERSION": F.col("version") == 1,
+        "UNSUPPORTED_VERSION": F.col("version").isin(1, 2),
         "INVALID_EVENT_TIME": F.col("event_time").isNotNull(),
         "MISSING_PRODUCER": present("producer"),
         "MISSING_ORDER_ID": present("payload.order_id"),
         "MISSING_CUSTOMER_ID": present("payload.customer_id"),
-        "UNKNOWN_WAREHOUSE": F.col("payload.warehouse_id").isin(*WAREHOUSES),
+        "UNKNOWN_WAREHOUSE": (
+            (F.col("version") == 1) & F.col("payload.warehouse_id").isin("WH-PARIS", "WH-LYON")
+        )
+        | ((F.col("version") == 2) & (F.col("payload.warehouse_id") == WAREHOUSE_ID)),
         "UNSUPPORTED_CURRENCY": F.col("payload.currency") == "EUR",
         "KEY_MISMATCH": F.col("kafka_key") == F.col("payload.order_id"),
         "EMPTY_ITEMS": F.size(items) > 0,

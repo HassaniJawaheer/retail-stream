@@ -4,6 +4,7 @@ from datetime import datetime
 
 import pytest
 
+from retail_stream.config import WAREHOUSE_ID
 from retail_stream.scenarios import encode_scenario, fixed_event
 from retail_stream.streaming import create_spark, parse_orders
 from retail_stream.validation import route_orders, validate_orders
@@ -35,6 +36,19 @@ def test_validation_rules():
         ]:
             event = fixed_event(random.Random(42), expected)
             event["payload"][field] = value
+            key, encoded = encode_scenario(event, "normal")
+            cases.append((key, encoded, expected))
+        for version, warehouse, expected in [
+            (1, "WH-PARIS", None),
+            (1, "WH-LYON", None),
+            (1, WAREHOUSE_ID, "UNKNOWN_WAREHOUSE"),
+            (2, "WH-PARIS", "UNKNOWN_WAREHOUSE"),
+            (2, "WH-LYON", "UNKNOWN_WAREHOUSE"),
+            (2, WAREHOUSE_ID, None),
+        ]:
+            event = fixed_event(random.Random(42), f"warehouse-{version}-{warehouse}")
+            event["version"] = version
+            event["payload"]["warehouse_id"] = warehouse
             key, encoded = encode_scenario(event, "normal")
             cases.append((key, encoded, expected))
         for sku in ["SKU-INCONNU", "", None]:

@@ -14,7 +14,7 @@ def test_scenarios_are_reproducible_and_do_not_change_the_source():
         assert encode_scenario(event, scenario) == encode_scenario(event, scenario)
     assert event["payload"]["items"][0]["quantity"] > 0
     assert event["payload"]["order_id"]
-    assert event["version"] == 1
+    assert event["version"] == 2
 
 
 @pytest.mark.parametrize("remaining,delivery_error", [(1, None), (0, "delivery failed")])

@@ -11,13 +11,19 @@ from retail_stream.dashboard_data import COLUMNS
 APP = str(Path(__file__).parents[1] / "src/retail_stream/dashboard.py")
 
 
-def test_dashboard_filters_and_weighted_average(monkeypatch):
+def test_dashboard_single_warehouse_and_weighted_average(monkeypatch):
     frame = pd.DataFrame(
         [
-            (datetime(2026, 1, 1, tzinfo=timezone.utc), "WH-PARIS", 1, Decimal(1000), Decimal(2)),
+            (
+                datetime(2026, 1, 1, tzinfo=timezone.utc),
+                "WH-CORBEIL-01",
+                1,
+                Decimal(1000),
+                Decimal(2),
+            ),
             (
                 datetime(2026, 1, 1, 0, 1, tzinfo=timezone.utc),
-                "WH-LYON",
+                "WH-CORBEIL-01",
                 3,
                 Decimal(9000),
                 Decimal(6),
@@ -29,10 +35,9 @@ def test_dashboard_filters_and_weighted_average(monkeypatch):
     app = AppTest.from_file(APP).run()
     assert not app.exception
     assert [metric.value for metric in app.metric] == ["4", "100,00 €", "8", "25,00 €"]
-    app.selectbox[1].select("WH-PARIS").run()
-    assert not app.exception
-    assert [metric.value for metric in app.metric] == ["1", "10,00 €", "2", "10,00 €"]
-    assert len(app.dataframe[0].value) == 1
+    assert len(app.selectbox) == 1
+    assert "Entrepôt" not in app.dataframe[0].value.columns
+    assert len(app.dataframe[0].value) == 2
 
 
 def test_dashboard_empty_period(monkeypatch):

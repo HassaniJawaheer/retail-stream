@@ -4,7 +4,7 @@ import pandas as pd
 import psycopg
 from psycopg.rows import dict_row
 
-from retail_stream.config import DATABASE_URL
+from retail_stream.config import DATABASE_URL, WAREHOUSE_ID
 
 COLUMNS = ["window_start", "warehouse_id", "order_count", "total_amount_cents", "item_count"]
 
@@ -15,9 +15,10 @@ def load_metrics(since=None) -> pd.DataFrame:
         connection.execute("SET LOCAL statement_timeout = '5s'")
         rows = connection.execute(
             "SELECT window_start, warehouse_id, order_count, total_amount_cents, item_count "
-            "FROM order_metrics WHERE (%s::timestamptz IS NULL OR window_start >= %s) "
+            "FROM order_metrics WHERE warehouse_id = %s "
+            "AND (%s::timestamptz IS NULL OR window_start >= %s) "
             "ORDER BY window_start, warehouse_id",
-            (since, since),
+            (WAREHOUSE_ID, since, since),
         ).fetchall()
     return pd.DataFrame(rows, columns=COLUMNS)
 

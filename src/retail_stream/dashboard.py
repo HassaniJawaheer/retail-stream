@@ -8,12 +8,12 @@ from retail_stream.dashboard_data import euros, load_metrics, summarize
 
 st.set_page_config(page_title="RetailStream", page_icon="🛒", layout="wide")
 st.title("RetailStream")
-st.caption("Commandes créées · Montants en euros · Horaires UTC")
+st.caption("Corbeil-Essonnes · Commandes créées · Montants en euros · Horaires UTC")
 
 
 @st.fragment(run_every="10s")
 def dashboard():
-    period_col, warehouse_col, refresh_col = st.columns([2, 2, 1])
+    period_col, refresh_col = st.columns([4, 1])
     periods = {
         "Tout l’historique": None,
         "Dernière heure": 1,
@@ -34,12 +34,11 @@ def dashboard():
         st.error("PostgreSQL est indisponible. Vérifiez son démarrage et DATABASE_URL.")
         return
     if frame.empty:
-        st.info("Aucune commande pour cette période. Lancez le pipeline ou élargissez la période.")
+        st.info(
+            "Aucune commande pour Corbeil-Essonnes sur cette période. "
+            "Lancez le pipeline ou élargissez la période."
+        )
         return
-    warehouses = ["Tous les entrepôts", *sorted(frame["warehouse_id"].unique())]
-    warehouse = warehouse_col.selectbox("Entrepôt", warehouses)
-    if warehouse != "Tous les entrepôts":
-        frame = frame[frame["warehouse_id"] == warehouse]
     count, amount, items, average = summarize(frame)
     cards = st.columns(4)
     cards[0].metric("Commandes", f"{count:,}".replace(",", " "))
@@ -59,7 +58,7 @@ def dashboard():
     with right:
         st.subheader("Montant par minute")
         st.bar_chart(timeline[["Montant (€)"]], color="#0d9488")
-    st.subheader("Détail par minute et entrepôt")
+    st.subheader("Détail par minute")
     detail = frame.sort_values(["window_start", "warehouse_id"], ascending=[False, True]).copy()
     detail["Montant (€)"] = detail["total_amount_cents"].astype(float) / 100
     detail["Panier moyen (€)"] = detail["Montant (€)"] / detail["order_count"]
@@ -72,7 +71,7 @@ def dashboard():
             "order_count": "Commandes",
             "item_count": "Articles",
         }
-    ).drop(columns="total_amount_cents")
+    ).drop(columns=["total_amount_cents", "Entrepôt"])
     st.dataframe(
         detail,
         hide_index=True,

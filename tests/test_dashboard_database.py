@@ -25,8 +25,14 @@ def test_dashboard_reads_postgresql(monkeypatch):
         with psycopg.connect(dsn) as connection:
             connection.execute(
                 "INSERT INTO order_metrics VALUES "
-                "('2026-01-01 00:00Z', '2026-01-01 00:01Z', 'WH-PARIS', 2, 3000, 4, 1500), "
-                "('2026-01-01 00:01Z', '2026-01-01 00:02Z', 'WH-LYON', 1, 900, 1, 900)"
+                "('2026-01-01 00:00Z', '2026-01-01 00:01Z', 'WH-CORBEIL-01', 2, 3000, 4, 1500), "
+                "('2026-01-01 00:01Z', '2026-01-01 00:02Z', 'WH-CORBEIL-01', 1, 900, 1, 900)"
+            )
+        with psycopg.connect(dsn) as connection:
+            connection.execute(
+                "INSERT INTO order_metrics VALUES "
+                "('2026-01-01 00:00Z', '2026-01-01 00:01Z', 'WH-PARIS', 9, 9000, 9, 1000), "
+                "('2026-01-01 00:00Z', '2026-01-01 00:01Z', 'WH-LYON', 5, 5000, 5, 1000)"
             )
         monkeypatch.setattr("retail_stream.dashboard_data.DATABASE_URL", dsn)
         assert len(load_metrics()) == 2
@@ -38,6 +44,8 @@ def test_dashboard_reads_postgresql(monkeypatch):
         ).run()
         assert not app.exception
         assert not app.error
+        with psycopg.connect(dsn) as connection:
+            assert connection.execute("SELECT count(*) FROM order_metrics").fetchone()[0] == 4
         assert [metric.value for metric in app.metric] == ["3", "39,00 €", "5", "13,00 €"]
     finally:
         with psycopg.connect(DATABASE_URL) as connection:
