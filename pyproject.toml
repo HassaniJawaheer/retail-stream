@@ -13,6 +13,9 @@ dependencies = [
 ]
 
 [project.scripts]
+retail-ops = "retail_stream.operations:main"
+retail-outbox = "retail_stream.outbox:main"
+retail-business = "retail_stream.business_streaming:main"
 retail-produce = "retail_stream.producer:main"
 retail-stream = "retail_stream.streaming:main"
 retail-deduplicate = "retail_stream.deduplication:main"
@@ -29,7 +32,7 @@ dev = ["pytest==8.4.2", "ruff==0.14.3"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = "-m 'not integration'"
-markers = ["integration: nécessite Kafka et Java, démarre Spark"]
+markers = ["integration: nécessite PostgreSQL et/ou Kafka et Java selon le test"]
 
 [tool.ruff]
 target-version = "py311"

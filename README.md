@@ -1,6 +1,6 @@
 # RetailStream
 
-RetailStream est un projet de Data Engineering consacré aux événements e-commerce et supply chain. Le producteur envoie des commandes fictives à Kafka. Spark les valide et les répartit dans deux topics : `retail.orders.valid` et `retail.orders.invalid`.
+RetailStream est un projet de Data Engineering consacré aux événements e-commerce et supply chain. Un catalogue PostgreSQL alimente une simulation de commandes, réservations et réapprovisionnements. Kafka transporte les événements ; Spark les valide et produit les indicateurs consultables dans Streamlit.
 
 ## Prérequis
 
@@ -20,20 +20,22 @@ Depuis la racine du dépôt :
 uv sync --locked
 docker compose up -d --wait kafka postgres
 docker compose run --rm kafka-init
+uv run --locked retail-ops init
 ```
 
-Lancer chaque traitement dans un terminal distinct et le laisser tourner :
+Lancer chaque traitement dans un terminal distinct :
 
-| Terminal | Commande |
+| Traitement | Commande |
 |---|---|
-| 1 — Validation | `uv run --locked retail-stream` |
-| 2 — Déduplication | `uv run --locked retail-deduplicate` |
-| 3 — Agrégations | `uv run --locked retail-aggregate` |
+| Publication Kafka | `uv run --locked retail-outbox` |
+| Validation Spark | `uv run --locked retail-stream` |
+| Analyse Spark | `uv run --locked retail-business` |
+| Expéditions, expirations et réceptions | `uv run --locked retail-ops worker` |
 
-Dans un quatrième terminal, produire les commandes :
+Puis générer des commandes :
 
 ```bash
-uv run --locked retail-produce --count 20 --rate 2
+uv run --locked retail-ops simulate --count 20 --rate 2
 ```
 
 Pour ouvrir le dashboard dans un autre terminal :
@@ -42,12 +44,12 @@ Pour ouvrir le dashboard dans un autre terminal :
 uv run --locked streamlit run src/retail_stream/dashboard.py --server.address 127.0.0.1
 ```
 
-Ouvrir http://127.0.0.1:8501 : indicateurs, graphiques et filtres par période et entrepôt, actualisés toutes les dix secondes.
+Ouvrir http://127.0.0.1:8501 et sélectionner **Activité métier** : commandes, stocks et réapprovisionnements, actualisés toutes les dix secondes.
 
 Consulter les résultats dans PostgreSQL :
 
 ```bash
-docker compose exec postgres psql -U retail -d retail -c "SELECT * FROM order_metrics ORDER BY window_start DESC, warehouse_id LIMIT 20;"
+docker compose exec postgres psql -U retail -d retail -c "SELECT * FROM business_metrics ORDER BY window_start DESC LIMIT 20;"
 ```
 
 Pour arrêter : `Ctrl+C` dans les terminaux des traitements, puis `docker compose stop`.
@@ -61,7 +63,9 @@ uv run --locked pytest -m integration
 
 ## Événements
 
-Chaque message JSON représente une création de commande, avec un `event_id`, un `event_type`, une date UTC, un producteur, une version de schéma et un `payload`.
+Les événements décrivent les commandes, réservations, refus, expéditions et mouvements de stock. Le catalogue initial contient 16 produits fictifs ; Best Buy sera intégré ultérieurement.
+
+Le [guide catalogue et stocks](docs/catalogue-et-stocks.md) décrit le contrat produit, les garanties de reprise, les essais manuels et le parcours historique.
 
 
 ## Configuration et stockage
@@ -72,10 +76,15 @@ Chaque message JSON représente une création de commande, avec un `event_id`, u
 | `KAFKA_ORDERS_TOPIC` | `retail.orders.raw` |
 | `KAFKA_VALID_TOPIC` | `retail.orders.valid` |
 | `KAFKA_INVALID_TOPIC` | `retail.orders.invalid` |
-| `SPARK_CHECKPOINT` | `.state/checkpoints/orders-validation-v1` |
+| `SPARK_BUSINESS_VALIDATION_CHECKPOINT` | `.state/checkpoints/orders-validation-v3` |
 | `KAFKA_UNIQUE_TOPIC` | `retail.orders.unique` |
 | `SPARK_DEDUP_CHECKPOINT` | `.state/checkpoints/orders-dedup-v1` |
 | `SPARK_DEDUP_WATERMARK` | `2 minutes` |
 | `DATABASE_URL` | `postgresql://retail:retail_local@127.0.0.1:5433/retail` |
 | `SPARK_ANALYTICS_PATH` | `.state/analytics` |
 | `SPARK_AGG_WATERMARK` | `2 minutes` |
+| `KAFKA_INVENTORY_TOPIC` | `retail.inventory.events` |
+| `KAFKA_INVENTORY_INVALID_TOPIC` | `retail.inventory.invalid` |
+| `SPARK_BUSINESS_CHECKPOINT` | `.state/checkpoints/business-v1` |
+
+Conserver les volumes PostgreSQL/Kafka et les checkpoints pour la reprise. L'outbox et le journal analytique n'ont pas encore de purge automatique.

@@ -16,3 +16,11 @@ ANALYTICS_PATH = os.getenv("SPARK_ANALYTICS_PATH", ".state/analytics")
 AGG_WATERMARK = os.getenv("SPARK_AGG_WATERMARK", "2 minutes")
 
 WAREHOUSE_ID = "WH-CORBEIL-01"
+
+INVENTORY_TOPIC = os.getenv("KAFKA_INVENTORY_TOPIC", "retail.inventory.events")
+INVENTORY_INVALID_TOPIC = os.getenv("KAFKA_INVENTORY_INVALID_TOPIC", "retail.inventory.invalid")
+BUSINESS_CHECKPOINT = os.getenv("SPARK_BUSINESS_CHECKPOINT", ".state/checkpoints/business-v1")
+BUSINESS_VALIDATION_CHECKPOINT = os.getenv(
+    "SPARK_BUSINESS_VALIDATION_CHECKPOINT",
+    os.getenv("SPARK_CHECKPOINT", ".state/checkpoints/orders-validation-v3"),
+)

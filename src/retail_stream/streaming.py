@@ -19,7 +19,8 @@ from pyspark.sql.types import (
 
 from retail_stream.config import (
     BOOTSTRAP_SERVERS,
-    CHECKPOINT,
+    BUSINESS_VALIDATION_CHECKPOINT,
+    DATABASE_URL,
     INVALID_TOPIC,
     ORDERS_TOPIC,
     VALID_TOPIC,
@@ -31,6 +32,7 @@ ITEM_SCHEMA = StructType(
         StructField("sku", StringType()),
         StructField("quantity", IntegerType()),
         StructField("unit_price_cents", LongType()),
+        StructField("product_version", LongType()),
     ]
 )
 EVENT_SCHEMA = StructType(
@@ -41,6 +43,7 @@ EVENT_SCHEMA = StructType(
         StructField("event_time", TimestampType()),
         StructField("producer", StringType()),
         StructField("version", IntegerType()),
+        StructField("entity_version", LongType()),
         StructField(
             "payload",
             StructType(
@@ -51,6 +54,18 @@ EVENT_SCHEMA = StructType(
                     StructField("currency", StringType()),
                     StructField("items", ArrayType(ITEM_SCHEMA)),
                     StructField("total_amount_cents", LongType()),
+                    StructField("status", StringType()),
+                    StructField("reason", StringType()),
+                    StructField("sku", StringType()),
+                    StructField("operation_id", StringType()),
+                    StructField("replenishment_id", StringType()),
+                    StructField("quantity", LongType()),
+                    StructField("physical", LongType()),
+                    StructField("reserved", LongType()),
+                    StructField("available", LongType()),
+                    StructField("physical_delta", LongType()),
+                    StructField("reserved_delta", LongType()),
+                    StructField("stock_version", LongType()),
                 ]
             ),
         ),
@@ -98,15 +113,29 @@ def read_orders(spark: SparkSession, bootstrap_servers: str, topic: str) -> Data
 
 
 def start_validation(
-    spark, bootstrap_servers, topic, valid_topic, invalid_topic, checkpoint, available_now=False
+    spark,
+    bootstrap_servers,
+    topic,
+    valid_topic,
+    invalid_topic,
+    checkpoint,
+    available_now=False,
+    database_url=DATABASE_URL,
 ):
     if len({topic, valid_topic, invalid_topic}) != 3:
         raise ValueError("Les topics source, valide et invalide doivent être distincts")
-    orders = validate_orders(read_orders(spark, bootstrap_servers, topic))
+    from retail_stream.catalog import list_products
+
+    def process(batch, batch_id):
+        known = None
+        if not batch.filter(col("version") == 3).isEmpty():
+            known = [row["sku"] for row in list_products(database_url)]
+        routed = route_orders(validate_orders(batch, known), valid_topic, invalid_topic)
+        routed.write.format("kafka").option("kafka.bootstrap.servers", bootstrap_servers).save()
+
     writer = (
-        route_orders(orders, valid_topic, invalid_topic)
-        .writeStream.format("kafka")
-        .option("kafka.bootstrap.servers", bootstrap_servers)
+        read_orders(spark, bootstrap_servers, topic)
+        .writeStream.foreachBatch(process)
         .option("checkpointLocation", checkpoint)
         .queryName("orders-validation")
         .outputMode("append")
@@ -140,7 +169,7 @@ def main():
             ORDERS_TOPIC,
             VALID_TOPIC,
             INVALID_TOPIC,
-            CHECKPOINT,
+            BUSINESS_VALIDATION_CHECKPOINT,
             args.available_now,
         )
         print(f"Validation active : {ORDERS_TOPIC} → {VALID_TOPIC} / {INVALID_TOPIC}", flush=True)

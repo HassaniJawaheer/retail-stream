@@ -1,0 +1,146 @@
+[
+  {
+    "sku": "SKU-001",
+    "name": "Souris filaire",
+    "manufacturer": "RetailStream Demo",
+    "model": "DEMO-001",
+    "category": "accessoires",
+    "description": "Souris filaire — produit fictif de démonstration.",
+    "price_cents": 1990
+  },
+  {
+    "sku": "SKU-002",
+    "name": "Clavier compact",
+    "manufacturer": "RetailStream Demo",
+    "model": "DEMO-002",
+    "category": "accessoires",
+    "description": "Clavier compact — produit fictif de démonstration.",
+    "price_cents": 3500
+  },
+  {
+    "sku": "SKU-003",
+    "name": "Câble USB",
+    "manufacturer": "RetailStream Demo",
+    "model": "DEMO-003",
+    "category": "accessoires",
+    "description": "Câble USB — produit fictif de démonstration.",
+    "price_cents": 799
+  },
+  {
+    "sku": "SKU-004",
+    "name": "Casque audio",
+    "manufacturer": "RetailStream Demo",
+    "model": "DEMO-004",
+    "category": "accessoires",
+    "description": "Casque audio — produit fictif de démonstration.",
+    "price_cents": 2000
+  },
+  {
+    "sku": "SKU-005",
+    "name": "Enceinte portable",
+    "manufacturer": "RetailStream Demo",
+    "model": "DEMO-005",
+    "category": "accessoires",
+    "description": "Enceinte portable — produit fictif de démonstration.",
+    "price_cents": 2250
+  },
+  {
+    "sku": "SKU-006",
+    "name": "Webcam",
+    "manufacturer": "RetailStream Demo",
+    "model": "DEMO-006",
+    "category": "accessoires",
+    "description": "Webcam — produit fictif de démonstration.",
+    "price_cents": 2500
+  },
+  {
+    "sku": "SKU-007",
+    "name": "Hub USB",
+    "manufacturer": "RetailStream Demo",
+    "model": "DEMO-007",
+    "category": "accessoires",
+    "description": "Hub USB — produit fictif de démonstration.",
+    "price_cents": 2750
+  },
+  {
+    "sku": "SKU-008",
+    "name": "Chargeur USB",
+    "manufacturer": "RetailStream Demo",
+    "model": "DEMO-008",
+    "category": "accessoires",
+    "description": "Chargeur USB — produit fictif de démonstration.",
+    "price_cents": 3000
+  },
+  {
+    "sku": "SKU-009",
+    "name": "Support ordinateur",
+    "manufacturer": "RetailStream Demo",
+    "model": "DEMO-009",
+    "category": "accessoires",
+    "description": "Support ordinateur — produit fictif de démonstration.",
+    "price_cents": 3250
+  },
+  {
+    "sku": "SKU-010",
+    "name": "Tapis de souris",
+    "manufacturer": "RetailStream Demo",
+    "model": "DEMO-010",
+    "category": "accessoires",
+    "description": "Tapis de souris — produit fictif de démonstration.",
+    "price_cents": 3500
+  },
+  {
+    "sku": "SKU-011",
+    "name": "Clé USB",
+    "manufacturer": "RetailStream Demo",
+    "model": "DEMO-011",
+    "category": "accessoires",
+    "description": "Clé USB — produit fictif de démonstration.",
+    "price_cents": 3750
+  },
+  {
+    "sku": "SKU-012",
+    "name": "Carte mémoire",
+    "manufacturer": "RetailStream Demo",
+    "model": "DEMO-012",
+    "category": "accessoires",
+    "description": "Carte mémoire — produit fictif de démonstration.",
+    "price_cents": 4000
+  },
+  {
+    "sku": "SKU-013",
+    "name": "Disque externe",
+    "manufacturer": "RetailStream Demo",
+    "model": "DEMO-013",
+    "category": "accessoires",
+    "description": "Disque externe — produit fictif de démonstration.",
+    "price_cents": 4250
+  },
+  {
+    "sku": "SKU-014",
+    "name": "Microphone",
+    "manufacturer": "RetailStream Demo",
+    "model": "DEMO-014",
+    "category": "accessoires",
+    "description": "Microphone — produit fictif de démonstration.",
+    "price_cents": 4500
+  },
+  {
+    "sku": "SKU-015",
+    "name": "Adaptateur HDMI",
+    "manufacturer": "RetailStream Demo",
+    "model": "DEMO-015",
+    "category": "accessoires",
+    "description": "Adaptateur HDMI — produit fictif de démonstration.",
+    "price_cents": 4750
+  },
+  {
+    "sku": "SKU-016",
+    "name": "Pochette ordinateur",
+    "manufacturer": "RetailStream Demo",
+    "model": "DEMO-016",
+    "category": "accessoires",
+    "description": "Pochette ordinateur — produit fictif de démonstration.",
+    "price_cents": 5000
+  }
+]

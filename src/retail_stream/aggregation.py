@@ -71,7 +71,7 @@ def start_analytics(
     staging = root / "orders"
     staging.mkdir(parents=True, exist_ok=True)
     initialize_database(database_url)
-    orders = read_orders(spark, bootstrap_servers, topic)
+    orders = read_orders(spark, bootstrap_servers, topic).filter(F.col("version").isin(1, 2))
     dedup_writer = (
         order_facts(deduplicate_orders(orders, watermark))
         .writeStream.format("parquet")

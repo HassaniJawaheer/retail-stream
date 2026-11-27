@@ -40,7 +40,7 @@ services:
     command:
       - -ec
       - |
-        for topic in retail.orders.raw retail.orders.valid retail.orders.invalid retail.orders.unique; do
+        for topic in retail.orders.raw retail.orders.valid retail.orders.invalid retail.orders.unique retail.inventory.events retail.inventory.invalid; do
           /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:29092 --create --if-not-exists --topic "$$topic" --partitions 3 --replication-factor 1
         done
 

@@ -13,6 +13,12 @@ st.caption("Corbeil-Essonnes · Commandes créées · Montants en euros · Horai
 
 @st.fragment(run_every="10s")
 def dashboard():
+    view = st.radio("Vue", ["Commandes historiques", "Activité métier"], horizontal=True)
+    if view == "Activité métier":
+        from retail_stream.business_dashboard import render_business
+
+        render_business()
+        return
     period_col, refresh_col = st.columns([4, 1])
     periods = {
         "Tout l’historique": None,
